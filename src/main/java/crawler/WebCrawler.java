@@ -3,12 +3,18 @@ package crawler;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 
 public class WebCrawler {
     private final String domain;
     private final String originalUrl;
+    private static final Integer MAX_THREADS = 10;
     private final LinkedHashSet<String> collectedLinks = new LinkedHashSet<>(); // Keeps order & uniqueness
+    private final ExecutorService executorService = Executors.newFixedThreadPool(MAX_THREADS); // Adjust the thread pool size as needed
+
 
     public WebCrawler(String startUrl) {
         this.originalUrl = normalizeUrl(startUrl); // Store normalized original URL
@@ -17,10 +23,13 @@ public class WebCrawler {
     }
 
     public void crawl(String url) {
-        String html = HtmlFetcher.fetch(url);
-        if (html != null) {
-            processPage(html);
-        }
+        // Submit a task to the executor service for concurrent processing
+        executorService.submit(() -> {
+            String html = HtmlFetcher.fetch(url);
+            if (html != null) {
+                processPage(html);
+            }
+        });
     }
 
     public void processPage(String html) {
@@ -31,9 +40,10 @@ public class WebCrawler {
         }
 
         collectedLinks.addAll(newLinks);
+        printLinks();
     }
 
-    public void start() {
+    public void printLinks() {
         // Convert Set to List to sort it properly
         List<String> sortedLinks = new ArrayList<>(collectedLinks);
 
@@ -42,6 +52,22 @@ public class WebCrawler {
         // Print the sorted links
         for (String link : sortedLinks) {
             System.out.println(link);
+        }
+    }
+
+    public void shutdown() {
+        try {
+            // Initiate graceful shutdown
+            executorService.shutdown();
+            // Wait for all tasks to finish
+            if (!executorService.awaitTermination(90, TimeUnit.SECONDS)) {
+                // If tasks did not finish within 60 seconds, force shutdown
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            // If interrupted while waiting for termination, force shutdown
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 
