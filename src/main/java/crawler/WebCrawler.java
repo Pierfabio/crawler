@@ -32,7 +32,7 @@ public class WebCrawler {
         });
     }
 
-    public void processPage(String html) {
+    private void processPage(String html) {
         // Extract and normalize links from ONLY this page
         Set<String> newLinks = new HashSet<>();
         for (String link : LinkExtractor.extractLinks(html, domain)) {
@@ -40,19 +40,21 @@ public class WebCrawler {
         }
 
         collectedLinks.addAll(newLinks);
-        printLinks();
+        sortLinks();
+    }
+    private void sortLinks() {
+        List<String> sortedLinks = new ArrayList<>(collectedLinks);
+        Collections.sort(sortedLinks); // Sort alphabetically
+        printLinks(sortedLinks, 0); // Start recursive printing from index 0
     }
 
-    public void printLinks() {
-        // Convert Set to List to sort it properly
-        List<String> sortedLinks = new ArrayList<>(collectedLinks);
-
-        Collections.sort(sortedLinks); // Sort alphabetically
-
-        // Print the sorted links
-        for (String link : sortedLinks) {
-            System.out.println(link);
+    private void printLinks(List<String> sortedLinks, int index) {
+        if (index >= sortedLinks.size()) {
+            return; // Stop when all links are printed
         }
+
+        System.out.println(sortedLinks.get(index)); // Print current link
+        printLinks(sortedLinks, index + 1); // Recursive call for next link
     }
 
     public void shutdown() {
